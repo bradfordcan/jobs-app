@@ -1,5 +1,6 @@
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
     id("com.android.library")
 }
 
@@ -28,12 +29,21 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                //put your multiplatform dependencies here
+                implementation(libs.koin.core)
+                implementation(libs.bundles.ktor.common)
+                api(libs.touchlab.kermit)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
+            }
+        }
+
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.okHttp)
+                implementation(libs.ktor.client.core)
             }
         }
     }
