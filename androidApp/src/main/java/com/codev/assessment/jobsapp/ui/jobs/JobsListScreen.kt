@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.FloatingActionButton
+import androidx.compose.material.ModalBottomSheetLayout
+import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -28,32 +31,38 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalAbsoluteTonalElevation
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.codev.assessment.jobsapp.android.R
 import com.codev.assessment.jobsapp.data.Job
+import com.codev.assessment.jobsapp.remote.body.NewJobRequest
+import com.codev.assessment.jobsapp.ui.components.CClickableText
+import com.codev.assessment.jobsapp.ui.components.CEditTextLabel
+import com.codev.assessment.jobsapp.ui.components.CEditTextSection
+import com.codev.assessment.jobsapp.ui.components.DropDownMenu
+import com.codev.assessment.jobsapp.ui.components.EditTextSingleLineBordered
 import com.codev.assessment.jobsapp.ui.components.LogoCoDev
+import com.codev.assessment.jobsapp.ui.components.PrimaryButton
+import com.codev.assessment.jobsapp.ui.components.RowInput
 import com.codev.assessment.jobsapp.ui.components.TopAppBarRow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -62,14 +71,30 @@ import kotlinx.coroutines.launch
 @Composable
 fun JobListPreview() {
     val job = Job()
-    JobsListScreen(arrayListOf(job, Job()), onRefresh = {
+    JobsListScreen(arrayListOf(job, Job()),
+        onRefresh = {
+
+    }, onCreateNewJob = {
+
+    }, onUpdateJob = {
 
     })
 }
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterialApi::class, ExperimentalLayoutApi::class,
+    ExperimentalComposeUiApi::class
+)
 @Composable
-fun JobsListScreen(jobs: List<Job>, onRefresh: () -> Unit) {
+fun JobsListScreen(
+    jobs: List<Job>,
+    onRefresh: () -> Unit,
+    onCreateNewJob: (NewJobRequest) -> Unit,
+    onUpdateJob: (Job) -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     // Pull to Refresh
     val refreshScope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(false) }
@@ -79,81 +104,240 @@ fun JobsListScreen(jobs: List<Job>, onRefresh: () -> Unit) {
         onRefresh()
         refreshing = false
     }
-    val coroutineScope = rememberCoroutineScope()
-    val pullRefreshState = rememberPullRefreshState(refreshing, ::refresh)
-    Scaffold(
-        topBar = {
-            TopAppBarRow {
-                LogoCoDev()
-            }
-        },
-        bottomBar = {
 
-        },
-        floatingActionButton = {
-            Box(
-                modifier = Modifier.navigationBarsPadding()
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            /*if (modalSheetState.isVisible)
-                                modalSheetState.hide()
-                            else {
-                                modalSheetState.show()
-                            }
-                            toggleEditMode(false)*/
+    val pullRefreshState = rememberPullRefreshState(refreshing, ::refresh)
+
+    // create/update job
+    val newJob = remember { mutableStateOf(NewJobRequest()) }
+    val updateJob = remember { mutableStateOf(Job()) }
+    val edit = remember { mutableStateOf(false) }
+    val editScope = rememberCoroutineScope()
+    fun toggleEditMode(isEdit: Boolean) = editScope.launch {
+        edit.value = isEdit
+        if (!edit.value) { // Post
+            // articleCategory.value = Category()
+        } else { // Edit
+            // createArticleRequest.value = RequestBodyArticle()
+        }
+    }
+
+    val clearScope = rememberCoroutineScope()
+    fun clear() = clearScope.launch {
+
+    }
+
+    // state for create/update job modal
+    val modalSheetState = rememberModalBottomSheetState(
+        initialValue = ModalBottomSheetValue.Hidden,
+        skipHalfExpanded = true,
+    )
+    LaunchedEffect(modalSheetState.targetValue) {
+        if (modalSheetState.targetValue == ModalBottomSheetValue.Hidden) {
+            toggleEditMode(false)
+        }
+    }
+
+    // create/update job modal
+    ModalBottomSheetLayout(
+        sheetState = modalSheetState,
+        sheetShape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
+        sheetContent = {
+            Scaffold(
+                topBar = {
+                    TopAppBarRow {
+                        CClickableText(text = "Cancel") {
+                            coroutineScope.launch { modalSheetState.hide() }
+                            keyboardController?.hide()
+                            clear()
+                            toggleEditMode(false)
                         }
-                    },
-                    backgroundColor = Color.Red
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Add,
-                        contentDescription = "Add FAB",
-                        tint = Color.White,
-                    )
+
+                        val postText = if (edit.value) "Update" else "Create Job"
+                        PrimaryButton(text = postText) {
+                            coroutineScope.launch { modalSheetState.hide() }
+                            keyboardController?.hide()
+                            clear()
+
+                            if (!edit.value) {
+                                onCreateNewJob(newJob.value)
+                            } else {
+                                onUpdateJob(updateJob.value)
+                            }
+                        }
+                    }
+                },
+                bottomBar = {
+
+                },
+                content = {
+                    Column(
+                        Modifier
+                            .background(Color.White)
+                            .fillMaxHeight()
+                            .padding(it)
+                            .windowInsetsPadding(
+                                WindowInsets.ime
+                            )
+                            .navigationBarsPadding()
+                            .background(Color.Transparent)
+                            .padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxHeight(0.9f)
+                                .padding(
+                                    top = 8.dp,
+                                    start = 8.dp,
+                                    end = 8.dp,
+                                    bottom = 0.dp
+                                )
+                        ) {
+                            var jobTitle = ""
+                            if (edit.value) {
+                                jobTitle = updateJob.value.title
+                            }
+                            RowInput(padding = 16.dp) {
+                                CEditTextLabel(text = "First Name")
+                                EditTextSingleLineBordered(
+                                    LocalFocusManager.current,
+                                    value = jobTitle,
+                                    hint = "Job Title",
+                                    onValueUpdate = { title ->
+                                        updateJob.value.title = title
+                                    }
+                                )
+                            }
+
+                            var jobDescription = ""
+                            if (edit.value) {
+                                jobDescription = updateJob.value.description
+                            }
+                            RowInput(padding = 16.dp) {
+                                CEditTextLabel(text = "Job Description")
+                                EditTextSingleLineBordered(
+                                    LocalFocusManager.current,
+                                    value = jobDescription,
+                                    hint = "Job Description",
+                                    onValueUpdate = { description ->
+                                        updateJob.value.description = description
+                                    }
+                                )
+                            }
+
+                            var numOpenings = 0
+                            if (edit.value) {
+                                numOpenings = updateJob.value.noOfOpenings
+                            }
+                            RowInput(padding = 16.dp) {
+                                CEditTextLabel(text = "No. of Openings", paddingBottom = 0.dp)
+                                EditTextSingleLineBordered(
+                                    LocalFocusManager.current,
+                                    value = numOpenings.toString(),
+                                    hint = "No. of Openings",
+                                    onValueUpdate = { selectedNumOpenings ->
+                                        numOpenings = selectedNumOpenings.toInt()
+                                    },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                )
+                            }
+
+                            var industry = 0
+                            if (edit.value) {
+                                industry = updateJob.value.industry
+                            }
+                            val industryTypes = (0..8).toList().map { it.toString() }
+                            RowInput(padding = 16.dp) {
+                                CEditTextLabel(text = "Industry Type", isRequired = true)
+                                DropDownMenu(
+                                    industryTypes, valueText = industry.toString(), onValueUpdate = {type ->
+                                        industry = type.toInt()
+                                    }, "Industry Type"
+                                )
+                            }
+                        }
+                    }
                 }
-            }
-        },
-        content = {
-            Column(
-                Modifier
-                    .background(Color.White)
-                    .fillMaxHeight()
-                    .padding(it)
-                    .windowInsetsPadding(
-                        WindowInsets.ime
-                    )
-                    .navigationBarsPadding()
-                    .background(Color.Transparent)
-                    .padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 8.dp)
-            ) {
-                Box(Modifier.pullRefresh(pullRefreshState).padding(top = 0.dp)) {
-                    Column() {
-                        if (jobs.isNotEmpty()) {
-                            LazyColumn(
-                                modifier = Modifier
-                                    .consumeWindowInsets(it)
-                                    .fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                if (!refreshing) {
-                                    itemsIndexed(jobs) { index, item ->
-                                        JobItem(item)
+            )
+        }
+    ) {
+        // jobs list
+        Scaffold(
+            topBar = {
+                TopAppBarRow {
+                    LogoCoDev()
+                }
+            },
+            bottomBar = {
+
+            },
+            floatingActionButton = {
+                Box(
+                    modifier = Modifier.navigationBarsPadding()
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                if (modalSheetState.isVisible)
+                                    modalSheetState.hide()
+                                else {
+                                    modalSheetState.show()
+                                }
+                                toggleEditMode(false)
+                            }
+                        },
+                        backgroundColor = Color.Red
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = "Add FAB",
+                            tint = Color.White,
+                        )
+                    }
+                }
+            },
+            content = {
+                Column(
+                    Modifier
+                        .background(Color.White)
+                        .fillMaxHeight()
+                        .padding(it)
+                        .windowInsetsPadding(
+                            WindowInsets.ime
+                        )
+                        .navigationBarsPadding()
+                        .background(Color.Transparent)
+                        .padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 8.dp)
+                ) {
+                    Box(
+                        Modifier
+                            .pullRefresh(pullRefreshState)
+                            .padding(top = 0.dp)) {
+                        Column() {
+                            if (jobs.isNotEmpty()) {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .consumeWindowInsets(it)
+                                        .fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    if (!refreshing) {
+                                        itemsIndexed(jobs) { index, item ->
+                                            JobItem(item)
+                                        }
                                     }
                                 }
                             }
                         }
+                        PullRefreshIndicator(
+                            refreshing,
+                            pullRefreshState,
+                            Modifier.align(Alignment.TopCenter)
+                        )
                     }
-                    PullRefreshIndicator(
-                        refreshing,
-                        pullRefreshState,
-                        Modifier.align(Alignment.TopCenter)
-                    )
                 }
             }
-        }
-    )
+        )
+    }
 }
 
 
@@ -165,14 +349,13 @@ fun JobItemPreview() {
 }
 
 
-
 @Composable
 fun JobItem(job: Job) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, start = 14.dp, end = 14.dp)
-            .clickable{ },
+            .clickable { },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 4.dp
         ),

@@ -40,6 +40,12 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     onRefresh = {
                         // Get all jobs
                         jobsViewModel.getJobs()
+                    },
+                    onCreateNewJob = {
+
+                    },
+                    onUpdateJob = {
+
                     }
                 )
             }

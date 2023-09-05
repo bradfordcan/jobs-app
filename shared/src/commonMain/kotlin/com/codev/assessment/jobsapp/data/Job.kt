@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 data class Job(
     val id: String,
     val noOfOpenings: Int,
-    val title: String,
-    val description: String,
+    var title: String,
+    var description: String,
     val industry: Int,
 
     ) {

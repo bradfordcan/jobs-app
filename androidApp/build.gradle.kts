@@ -60,4 +60,6 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.insert.koin.koin.androidx.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
+
+    implementation("androidx.compose.material3:material3:1.0.0")
 }
