@@ -6,11 +6,11 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import org.koin.core.component.KoinComponent
 
+private const val BASE_URL = "https://codev-job-board-app.azurewebsites.net/api/Job"
 class JobsApi(
-    private val client: HttpClient,
-    var baseUrl: String = "${Url.BASE_URL}/Job",
+    private val client: HttpClient
 ) : KoinComponent {
 
-    suspend fun getAll() = client.get(baseUrl).body<Response<List<Job>>>()
+    suspend fun getAll() = client.get("$BASE_URL/getall").body<List<Job>>()
 
 }

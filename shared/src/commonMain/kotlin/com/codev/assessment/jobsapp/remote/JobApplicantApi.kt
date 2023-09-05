@@ -5,7 +5,7 @@ import org.koin.core.component.KoinComponent
 
 class JobApplicantApi(
     private val client: HttpClient,
-    var baseUrl: String = "${Url.BASE_URL}/JobApplicant",
+    var baseUrl: String = "https://codev-job-board-app.azurewebsites.net/api/JobApplicant",
 ) : KoinComponent {
 
 }

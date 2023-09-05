@@ -1,19 +1,15 @@
 package com.codev.assessment.jobsapp.di
 
-import com.codev.assessment.jobsapp.remote.ApplicantsApi
-import com.codev.assessment.jobsapp.remote.JobApplicantApi
 import com.codev.assessment.jobsapp.remote.JobsApi
-import com.codev.assessment.jobsapp.repository.ApplicantsDataSource
-import com.codev.assessment.jobsapp.repository.ApplicantsRepository
-import com.codev.assessment.jobsapp.repository.JobApplicantDataSource
-import com.codev.assessment.jobsapp.repository.JobApplicantRepository
 import com.codev.assessment.jobsapp.repository.JobsDataSource
 import com.codev.assessment.jobsapp.repository.JobsRepository
+import com.codev.assessment.jobsapp.repository.platformModule
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CoroutineScope
@@ -27,21 +23,26 @@ import org.koin.dsl.module
 fun initKoin(enableNetworkLogs: Boolean = false, appDeclaration: KoinAppDeclaration = {}) =
     startKoin {
         appDeclaration()
-        modules(commonModule(enableNetworkLogs = enableNetworkLogs))
+        modules(commonModule(enableNetworkLogs = enableNetworkLogs), platformModule())
     }
+
 
 fun commonModule(enableNetworkLogs: Boolean) = module {
     single { createJson() }
     single { createHttpClient(get(), get(), enableNetworkLogs = enableNetworkLogs) }
     single { CoroutineScope(Dispatchers.Default + SupervisorJob()) }
 
-    single<JobsDataSource> { JobsRepository() }
-    single<ApplicantsDataSource> { ApplicantsRepository() }
-    single<JobApplicantDataSource> { JobApplicantRepository() }
+    /*val baseLogger = Logger(config = StaticConfig(logWriterList = listOf(platformLogWriter())), "ComSpace")
+    factory { (tag: String?) -> if (tag != null) baseLogger.withTag(tag) else baseLogger }*/
 
     single { JobsApi(get()) }
-    single { ApplicantsApi(get()) }
-    single { JobApplicantApi(get()) }
+    // single { ApplicantsApi(get()) }
+    // single { JobApplicantApi(get()) }
+
+    single<JobsDataSource> { JobsRepository() }
+    // single<ApplicantsDataSource> { ApplicantsRepository() }
+    // single<JobApplicantDataSource> { JobApplicantRepository() }
+
 
     /*single {
         DatabaseHelper(
@@ -52,31 +53,19 @@ fun commonModule(enableNetworkLogs: Boolean) = module {
     }*/
 }
 
-fun createJson() = Json {
-    isLenient = true
-    ignoreUnknownKeys = true
-    isLenient = true
-    prettyPrint = true
-    encodeDefaults = true
-    classDiscriminator = "#class"
-}
+// called by iOS etc
+fun initKoin() = initKoin(enableNetworkLogs = false) {}
 
-fun createHttpClient(
-    httpClientEngine: HttpClientEngine,
-    json: Json,
-    enableNetworkLogs: Boolean,
-): HttpClient {
-    val httpClient = HttpClient(httpClientEngine) {
-        install(ContentNegotiation) {
-            json(json)
-        }
-        if (enableNetworkLogs) {
-            install(Logging) {
-                logger = io.ktor.client.plugins.logging.Logger.DEFAULT
-                level = LogLevel.ALL
-            }
+fun createJson() = Json { isLenient = true; ignoreUnknownKeys = true }
+
+fun createHttpClient(httpClientEngine: HttpClientEngine, json: Json, enableNetworkLogs: Boolean) = HttpClient(httpClientEngine) {
+    install(ContentNegotiation) {
+        json(json)
+    }
+    if (enableNetworkLogs) {
+        install(Logging) {
+            logger = Logger.DEFAULT
+            level = LogLevel.INFO
         }
     }
-
-    return httpClient
 }

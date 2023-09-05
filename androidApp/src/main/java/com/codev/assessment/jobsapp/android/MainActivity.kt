@@ -3,24 +3,45 @@ package com.codev.assessment.jobsapp.android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.*
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
-import com.codev.assessment.jobsapp.Greeting
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.codev.assessment.jobsapp.data.Job
+import com.codev.assessment.jobsapp.ui.components.AppMainBackground
+import com.codev.assessment.jobsapp.ui.jobs.JobsListScreen
+import com.codev.assessment.jobsapp.ui.jobs.JobsViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.core.component.KoinComponent
 
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), KoinComponent {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val jobsViewModel: JobsViewModel by viewModel()
         setContent {
-            MyApplicationTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    GreetingView(Greeting().greet())
+            AppMainBackground {
+                val jobs = remember { mutableListOf<Job>() }
+                val jobsListState by jobsViewModel.jobsListState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = jobsListState.jobs) {
+                    jobs.clear()
+                    if (jobsListState.jobs.isNotEmpty()) {
+                        jobs.addAll(jobsListState.jobs)
+                        jobs.sortByDescending { it.title }
+                        // todo: do basic filtering
+                    }
                 }
+                jobsViewModel.getJobs()
+                JobsListScreen(
+                    jobs = jobs,
+                    onRefresh = {
+                        // Get all jobs
+                        jobsViewModel.getJobs()
+                    }
+                )
             }
         }
     }

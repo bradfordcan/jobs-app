@@ -42,8 +42,11 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.ktor.client.okHttp)
                 implementation(libs.ktor.client.core)
+                implementation("io.ktor:ktor-client-android-jvm:${libs.versions.ktor.get()}")
+
             }
         }
     }
@@ -55,4 +58,8 @@ android {
     defaultConfig {
         minSdk = 24
     }
+}
+
+kotlin.sourceSets.all {
+    languageSettings.optIn("kotlin.experimental.ExperimentalObjCName")
 }

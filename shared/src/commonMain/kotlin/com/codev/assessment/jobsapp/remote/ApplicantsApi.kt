@@ -1,6 +1,5 @@
 package com.codev.assessment.jobsapp.remote
 
-import com.codev.assessment.jobsapp.remote.Url.BASE_URL
 import io.ktor.client.HttpClient
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.KSerializer
@@ -14,7 +13,7 @@ import kotlin.reflect.KClass
 @Serializable(with = ResponseSerializer::class)
 sealed class Response<out T> {
     @Serializable
-    data class Ok<out T>(val success: Boolean? = false, val data: T? = null, val message: String) :
+    data class Ok<out T>(val data: T? = null) :
         Response<T>()
 
     @Serializable
@@ -38,7 +37,7 @@ private class ResponseSerializer<T>(private val dataSerializer: KSerializer<T>) 
 
 class ApplicantsApi(
     private val client: HttpClient,
-    var baseUrl: String = "$BASE_URL/Applicant",
+    var baseUrl: String = "https://codev-job-board-app.azurewebsites.net/api/Applicant",
 ) : KoinComponent {
 
 }
