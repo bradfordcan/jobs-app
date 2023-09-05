@@ -15,12 +15,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.codev.assessment.jobsapp.data.Applicant
 import com.codev.assessment.jobsapp.data.Job
+import com.codev.assessment.jobsapp.remote.body.ApplicantRequest
 import com.codev.assessment.jobsapp.ui.components.AppMainBackground
 import com.codev.assessment.jobsapp.ui.components.ApplicantDialog
 import com.codev.assessment.jobsapp.ui.components.ChangeUserTypeDialog
 import com.codev.assessment.jobsapp.ui.components.SimpleAlertDialog
 import com.codev.assessment.jobsapp.ui.dialog.UiViewModel
+import com.codev.assessment.jobsapp.ui.jobs.ApplicantsViewModel
+import com.codev.assessment.jobsapp.ui.jobs.JobApplicantViewModel
 import com.codev.assessment.jobsapp.ui.jobs.JobsListScreen
 import com.codev.assessment.jobsapp.ui.jobs.JobsViewModel
 import org.koin.android.ext.android.inject
@@ -33,6 +37,8 @@ class MainActivity : ComponentActivity(), KoinComponent {
         val settings: SharedPreferences by inject()
         var defaultSelected = settings.getInt("userType", 0)
         val jobsViewModel: JobsViewModel by viewModel()
+        val jobApplicantViewModel: JobApplicantViewModel by viewModel()
+        val applicantViewModel: ApplicantsViewModel by viewModel()
         val uiViewModel: UiViewModel by viewModel()
 
         val userTypes = arrayListOf("Admin", "Applicant")
@@ -97,6 +103,44 @@ class MainActivity : ComponentActivity(), KoinComponent {
                 // called on first run
                 jobsViewModel.getJobs()
 
+
+                // applicants
+                val applicants = remember { mutableListOf<Applicant>() }
+                val allApplicantsState by applicantViewModel.applicantsListState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = allApplicantsState.applicants) {
+                    applicants.clear()
+                    if (allApplicantsState.applicants.isNotEmpty()) {
+                        applicants.addAll(allApplicantsState.applicants)
+                        applicants.sortByDescending { it.fullName }
+
+                        // if exists, grab id and use it to apply job
+                        val applicantApply = applicants.find { it.emailAddress.contentEquals(allApplicantsState.email) }
+                        if(applicantApply != null) {
+                            jobApplicantViewModel.applyJob(allApplicantsState.jobId, Applicant(applicantApply.id, applicantApply.fullName, applicantApply.emailAddress))
+                        } else {
+                            // insert applicant data and grab id, then apply job
+                            applicantViewModel.insertApplicant(allApplicantsState.jobId, ApplicantRequest(allApplicantsState.fullName, allApplicantsState.email))
+                        }
+                    }
+                }
+
+
+                val applicantInsertState by applicantViewModel.newApplicantId.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = applicantInsertState.applicantId) {
+                    if (applicantInsertState.applicantId.isNotEmpty()) {
+                        // use new applicant id and apply for job
+                        jobApplicantViewModel.applyJob(allApplicantsState.jobId, Applicant(applicantInsertState.applicantId, applicantInsertState.fullName, applicantInsertState.email))
+                    }
+                }
+
+
+                val applyJobState by jobApplicantViewModel.applyJobState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = applyJobState.result) {
+                    if (applyJobState.result.isNotEmpty()) {
+                        showToast(context, applyJobState.result)
+                    }
+                }
+
                 // delete confirmation dialog
                 val confirmDeleteJobDialogState by uiViewModel.showAlertDialog.collectAsState()
                 SimpleAlertDialog(
@@ -118,7 +162,8 @@ class MainActivity : ComponentActivity(), KoinComponent {
                 if(applyJobDialogState.data != null) {
                     ApplicantDialog(title = applyJobDialogState.data!!.title, onDismiss = { fullName, email ->
                         if (fullName.isNotEmpty() && email.isNotEmpty()) {
-
+                            // todo: retrieve applicants and check if email address exists
+                            applicantViewModel.getApplicants(applyJobDialogState.data!!.id, fullName, email)
                         } else {
                             showToast(context, "Make sure fullName and email is not empty")
                         }
@@ -140,7 +185,6 @@ class MainActivity : ComponentActivity(), KoinComponent {
                 )*/
 
                 val userTypeDialog = remember { mutableStateOf(true) }
-
                 if (userTypeDialog.value) {
                     defaultSelected = settings.getInt("userType", 0)
                     ChangeUserTypeDialog(title = "Select User Type",

@@ -14,7 +14,7 @@ data class UserJobsListState(
 )
 
 data class ApplyJobState(
-    var jobs: String = "",
+    var result: String = "",
 )
 
 class JobApplicantViewModel(
@@ -33,10 +33,10 @@ class JobApplicantViewModel(
 
     private val _applyJobState = MutableStateFlow(ApplyJobState())
     val applyJobState: StateFlow<ApplyJobState> = _applyJobState
-    fun getJobsApplied(jobId: String, applicant: Applicant) {
+    fun applyJob(jobId: String, applicant: Applicant) {
         viewModelScope.launch {
             repository.applyJob(jobId, applicant).collect {
-                _applyJobState.value = ApplyJobState(jobs = it)
+                _applyJobState.value = ApplyJobState(result = it)
             }
         }
     }

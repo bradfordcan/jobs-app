@@ -10,11 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class ApplicantsListState(
-    var jobs: List<Applicant> = emptyList(),
+    var applicants: List<Applicant> = emptyList(),
+    val jobId: String,
+    val fullName: String,
+    val email: String,
 )
 
 data class NewApplicantState(
-    var jobId: String = "",
+    var applicantId: String = "",
+    val jobId: String,
+    val fullName: String,
+    val email: String,
 )
 
 data class UpdateApplicantState(
@@ -29,22 +35,22 @@ class ApplicantsViewModel(
     private val repository: ApplicantsDataSource,
 ) : ViewModel() {
 
-    private val _applicantsListState = MutableStateFlow(ApplicantsListState())
+    private val _applicantsListState = MutableStateFlow(ApplicantsListState(emptyList(),"","",""))
     val applicantsListState: StateFlow<ApplicantsListState> = _applicantsListState
-    fun getApplicants() {
+    fun getApplicants(jobId: String, fullName: String, email: String) {
         viewModelScope.launch {
             repository.getAll().collect {
-                _applicantsListState.value = ApplicantsListState(jobs = it)
+                _applicantsListState.value = ApplicantsListState(applicants = it, jobId = jobId, fullName = fullName, email = email)
             }
         }
     }
 
-    private val _newApplicantId = MutableStateFlow(NewApplicantState())
+    private val _newApplicantId = MutableStateFlow(NewApplicantState("", "", "", ""))
     val newApplicantId: StateFlow<NewApplicantState> = _newApplicantId
-    fun insertApplicant(request: ApplicantRequest) {
+    fun insertApplicant(jobId: String, request: ApplicantRequest) {
         viewModelScope.launch {
             repository.insertApplicant(request).collect {
-                _newApplicantId.value = NewApplicantState(jobId = it)
+                _newApplicantId.value = NewApplicantState(applicantId = it, jobId = jobId, fullName = request.fullName, email = request.emailAddress)
             }
         }
     }
