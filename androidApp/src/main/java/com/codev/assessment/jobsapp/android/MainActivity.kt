@@ -1,5 +1,6 @@
 package com.codev.assessment.jobsapp.android
 
+import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,29 +9,36 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.ui.components.AppMainBackground
+import com.codev.assessment.jobsapp.ui.components.ChangeUserTypeDialog
 import com.codev.assessment.jobsapp.ui.components.SimpleAlertDialog
 import com.codev.assessment.jobsapp.ui.dialog.UiViewModel
 import com.codev.assessment.jobsapp.ui.jobs.JobsListScreen
 import com.codev.assessment.jobsapp.ui.jobs.JobsViewModel
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.component.KoinComponent
 
 class MainActivity : ComponentActivity(), KoinComponent {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        val settings: SharedPreferences by inject()
+        var defaultSelected = settings.getInt("userType", 0)
         val jobsViewModel: JobsViewModel by viewModel()
         val uiViewModel: UiViewModel by viewModel()
         setContent {
             AppMainBackground {
                 val context = LocalContext.current
+
+                val searchJobQuery = remember { mutableStateOf("") }
+                val industryTypeQuery = remember { mutableIntStateOf(0) }
                 val jobs = remember { mutableListOf<Job>() }
                 val jobsListState by jobsViewModel.jobsListState.collectAsStateWithLifecycle()
                 LaunchedEffect(key1 = jobsListState.jobs) {
@@ -38,7 +46,6 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     if (jobsListState.jobs.isNotEmpty()) {
                         jobs.addAll(jobsListState.jobs)
                         jobs.sortByDescending { it.title }
-                        // todo: do basic filtering
                     }
                 }
 
@@ -88,6 +95,22 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     message = confirmDeleteJobDialogState.message
                 )
 
+                val userTypeDialog = remember { mutableStateOf(true) }
+                val userTypes = arrayListOf("Admin", "Applicant")
+
+                if (userTypeDialog.value) {
+                    defaultSelected = settings.getInt("userType", 0)
+                    ChangeUserTypeDialog(title = "Select User Type",
+                        optionsList = userTypes,
+                        defaultSelected = defaultSelected,
+                        submitButtonText = "Apply Settings",
+                        onSubmitButtonClick = {
+                            settings.edit().putInt("userType", it).apply()
+                            showToast(context, "You are now an ${userTypes[it]}")
+                        },
+                        onDismissRequest = { userTypeDialog.value = false })
+                }
+
                 JobsListScreen(
                     jobs = jobs,
                     onRefresh = {
@@ -106,6 +129,14 @@ class MainActivity : ComponentActivity(), KoinComponent {
                             "Confirm Delete",
                             "Are you sure you want to delete this job?"
                         )
+                    },
+                    onSearchJob = {
+                        if (it.isNotEmpty()) {
+
+                        }
+                    },
+                    onChangeUserType = {
+                        userTypeDialog.value = true
                     }
                 )
             }

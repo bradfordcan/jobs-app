@@ -32,6 +32,7 @@ kotlin {
                 implementation(libs.koin.core)
                 implementation(libs.bundles.ktor.common)
                 api(libs.touchlab.kermit)
+                implementation(libs.multiplatformSettings.common)
             }
         }
         val commonTest by getting {

@@ -15,6 +15,7 @@ runtime-livedata = "1.5.0"
 ui = "1.4.3"
 ui-tooling = "1.4.3"
 ui-tooling-preview = "1.4.3"
+multiplatformSettings = "1.0.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
@@ -43,6 +44,7 @@ androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmode
 ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "ui-tooling" }
 ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "ui-tooling-preview" }
 
+multiplatformSettings-common = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
 [bundles]
 ktor-common = ["ktor-client-core", "ktor-client-logging", "ktor-client-serialization", "ktor-client-contentNegotiation"]
 

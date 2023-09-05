@@ -88,6 +88,10 @@ fun JobListPreview() {
 
         }, onDeleteJob = {
 
+        }, onSearchJob = {
+
+        }, onChangeUserType = {
+
         })
 }
 
@@ -102,6 +106,8 @@ fun JobsListScreen(
     onCreateNewJob: (NewJobRequest) -> Unit,
     onUpdateJob: (Job) -> Unit,
     onDeleteJob: (String) -> Unit,
+    onSearchJob: (String) -> Unit,
+    onChangeUserType: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -291,7 +297,11 @@ fun JobsListScreen(
         Scaffold(
             topBar = {
                 TopAppBarRow {
-                    LogoCoDev()
+                    LogoCoDev(onSearchJob = {
+                        onSearchJob(it)
+                    }, onChangeUserType = {
+                        onChangeUserType()
+                    })
                 }
             },
             bottomBar = {
