@@ -20,14 +20,18 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalAbsoluteTonalElevation
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -42,11 +46,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.codev.assessment.jobsapp.android.R
 import com.codev.assessment.jobsapp.data.Job
+import com.codev.assessment.jobsapp.ui.components.LogoCoDev
+import com.codev.assessment.jobsapp.ui.components.TopAppBarRow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -71,17 +79,41 @@ fun JobsListScreen(jobs: List<Job>, onRefresh: () -> Unit) {
         onRefresh()
         refreshing = false
     }
-
+    val coroutineScope = rememberCoroutineScope()
     val pullRefreshState = rememberPullRefreshState(refreshing, ::refresh)
     Scaffold(
         topBar = {
-
+            TopAppBarRow {
+                LogoCoDev()
+            }
         },
         bottomBar = {
 
         },
         floatingActionButton = {
-
+            Box(
+                modifier = Modifier.navigationBarsPadding()
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            /*if (modalSheetState.isVisible)
+                                modalSheetState.hide()
+                            else {
+                                modalSheetState.show()
+                            }
+                            toggleEditMode(false)*/
+                        }
+                    },
+                    backgroundColor = Color.Red
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Add FAB",
+                        tint = Color.White,
+                    )
+                }
+            }
         },
         content = {
             Column(
@@ -151,11 +183,10 @@ fun JobItem(job: Job) {
         Column(
             modifier = Modifier.padding(15.dp)
         ) {
-            Text(text = job.title, fontWeight = FontWeight.Bold)
+            Text(text = "${job.title} (${job.noOfOpenings})", fontWeight = FontWeight.Bold)
             Text(text = job.description)
-            Spacer(Modifier.padding(8.dp))
-            Text(text = "Openings: ${job.noOfOpenings}")
-            Text(text = "Industry: ${job.industry}")
+            Spacer(Modifier.padding(2.dp))
+            Text(text = "Industry: ${job.industry}", color = Color.LightGray)
         }
     }
 }
