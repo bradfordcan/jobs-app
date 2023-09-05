@@ -80,7 +80,7 @@ fun ApplicantDialog(title: String, onDismiss: (String, String) -> Unit) {
                         onClick = {
 
                         },
-                        Modifie
+                        Modifier
                             .fillMaxWidth()
                             .padding(8.dp)
                             .weight(1F)
