@@ -18,6 +18,10 @@ data class NewJobState(
     var jobId: String = "",
 )
 
+data class UpdateJobState(
+    var successUpdate: Boolean = false,
+)
+
 class JobsViewModel(
     private val repository: JobsDataSource,
 ) : ViewModel() {
@@ -39,6 +43,16 @@ class JobsViewModel(
         viewModelScope.launch {
             repository.insertJob(newJobRequest).collect {
                 _newJobId.value = NewJobState(jobId = it)
+            }
+        }
+    }
+
+    private val _updateJobState = MutableStateFlow(UpdateJobState())
+    val updateJobState: StateFlow<UpdateJobState> = _updateJobState
+    fun updateJob(job: Job) {
+        viewModelScope.launch {
+            repository.updateJob(job).collect {
+                _updateJobState.value = UpdateJobState(successUpdate = it)
             }
         }
     }

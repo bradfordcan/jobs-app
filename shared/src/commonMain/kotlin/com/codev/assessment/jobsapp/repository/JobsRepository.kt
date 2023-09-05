@@ -14,6 +14,8 @@ interface JobsDataSource {
 
     fun insertJob(newJobRequest: NewJobRequest): Flow<String>
 
+    fun updateJob(job: Job): Flow<Boolean>
+
 }
 
 class JobsRepository : KoinComponent, JobsDataSource {
@@ -31,6 +33,13 @@ class JobsRepository : KoinComponent, JobsDataSource {
         return flow {
             val successfulInsert = api.insertJob(newJobRequest)
             emit(successfulInsert)
+        }
+    }
+
+    override fun updateJob(job: Job): Flow<Boolean> {
+        return flow {
+            val successfulUpdate = api.updateJob(job)
+            emit(successfulUpdate)
         }
     }
 

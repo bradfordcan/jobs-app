@@ -6,6 +6,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
@@ -35,6 +36,18 @@ class JobsApi(
             httpResponse.body()
         } else {
             ""
+        }
+    }
+
+    suspend fun updateJob(request: Job): Boolean {
+        val httpResponse: HttpResponse = client.put("$BASE_URL/update") {
+            contentType(ContentType.Application.Json)
+            setBody(body = request)
+        }
+        return if (httpResponse.status.value in 200..299) {
+            httpResponse.body()
+        } else {
+            false
         }
     }
 

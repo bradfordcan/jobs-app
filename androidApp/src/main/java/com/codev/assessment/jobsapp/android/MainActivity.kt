@@ -46,6 +46,15 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     }
                 }
 
+                val updateJob by jobsViewModel.updateJobState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = updateJob.successUpdate) {
+                    if (updateJob.successUpdate) {
+                        jobs.clear()
+                        showToast(context, "Job updated!")
+                        jobsViewModel.getJobs() // refresh list with updated job
+                    }
+                }
+
                 // called on first run
                 jobsViewModel.getJobs()
                 JobsListScreen(
@@ -58,7 +67,7 @@ class MainActivity : ComponentActivity(), KoinComponent {
                         jobsViewModel.insertJob(it)
                     },
                     onUpdateJob = {
-
+                        jobsViewModel.updateJob(it)
                     }
                 )
             }

@@ -167,6 +167,10 @@ fun JobsListScreen(
                                 newJob.value.industry = industry.value
                                 onCreateNewJob(newJob.value)
                             } else {
+                                updateJob.value.title = jobTitle.value
+                                updateJob.value.description = jobDescription.value
+                                updateJob.value.noOfOpenings = numOpenings.value
+                                updateJob.value.industry = industry.value
                                 onUpdateJob(updateJob.value)
                             }
                         }
@@ -389,7 +393,7 @@ fun JobItem(job: Job, onEdit: () -> Unit) {
         Column(
             modifier = Modifier.padding(15.dp)
         ) {
-            Text(text = "${job.title} (${job.noOfOpenings})", fontWeight = FontWeight.Bold)
+            Text(text = "${job.title} (${job.noOfOpenings} openings)", fontWeight = FontWeight.Bold)
             Text(text = job.description)
             Spacer(Modifier.padding(2.dp))
             Text(text = "Industry: ${job.industry}", color = Color.LightGray)
