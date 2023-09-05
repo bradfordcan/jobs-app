@@ -78,13 +78,9 @@ fun ApplicantDialog(title: String, onDismiss: (String, String) -> Unit) {
                 Row {
                     OutlinedButton(
                         onClick = {
-                            if (fullName.isNotEmpty() && email.isNotEmpty()) {
-                                onDismiss(fullName, email)
-                            } else {
-                                showToast(context, "Make sure fullName and email is not empty")
-                            }
+
                         },
-                        Modifier
+                        Modifie
                             .fillMaxWidth()
                             .padding(8.dp)
                             .weight(1F)
