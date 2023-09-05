@@ -4,10 +4,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class NewJobRequest(
-    val noOfOpenings: Int,
-    val title: String,
-    val description: String,
-    val industry: Int
+    var noOfOpenings: Int,
+    var title: String,
+    var description: String,
+    var industry: Int
 
     ) {
     constructor() : this(

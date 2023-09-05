@@ -38,10 +38,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -57,7 +57,6 @@ import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.remote.body.NewJobRequest
 import com.codev.assessment.jobsapp.ui.components.CClickableText
 import com.codev.assessment.jobsapp.ui.components.CEditTextLabel
-import com.codev.assessment.jobsapp.ui.components.CEditTextSection
 import com.codev.assessment.jobsapp.ui.components.DropDownMenu
 import com.codev.assessment.jobsapp.ui.components.EditTextSingleLineBordered
 import com.codev.assessment.jobsapp.ui.components.LogoCoDev
@@ -74,11 +73,11 @@ fun JobListPreview() {
     JobsListScreen(arrayListOf(job, Job()),
         onRefresh = {
 
-    }, onCreateNewJob = {
+        }, onCreateNewJob = {
 
-    }, onUpdateJob = {
+        }, onUpdateJob = {
 
-    })
+        })
 }
 
 @OptIn(
@@ -108,22 +107,20 @@ fun JobsListScreen(
     val pullRefreshState = rememberPullRefreshState(refreshing, ::refresh)
 
     // create/update job
+    val jobTitle = remember { mutableStateOf("") }
+    val jobDescription = remember { mutableStateOf("") }
+    val numOpenings = remember { mutableIntStateOf(0) }
+    val industry = remember { mutableIntStateOf(0) }
     val newJob = remember { mutableStateOf(NewJobRequest()) }
     val updateJob = remember { mutableStateOf(Job()) }
     val edit = remember { mutableStateOf(false) }
     val editScope = rememberCoroutineScope()
+
     fun toggleEditMode(isEdit: Boolean) = editScope.launch {
         edit.value = isEdit
-        if (!edit.value) { // Post
-            // articleCategory.value = Category()
-        } else { // Edit
-            // createArticleRequest.value = RequestBodyArticle()
+        if (!edit.value) { // Create
+            newJob.value = NewJobRequest()
         }
-    }
-
-    val clearScope = rememberCoroutineScope()
-    fun clear() = clearScope.launch {
-
     }
 
     // state for create/update job modal
@@ -135,6 +132,11 @@ fun JobsListScreen(
         if (modalSheetState.targetValue == ModalBottomSheetValue.Hidden) {
             toggleEditMode(false)
         }
+    }
+
+    val clearScope = rememberCoroutineScope()
+    fun clear() = clearScope.launch {
+
     }
 
     // create/update job modal
@@ -159,6 +161,10 @@ fun JobsListScreen(
                             clear()
 
                             if (!edit.value) {
+                                newJob.value.title = jobTitle.value
+                                newJob.value.description = jobDescription.value
+                                newJob.value.noOfOpenings = numOpenings.value
+                                newJob.value.industry = industry.value
                                 onCreateNewJob(newJob.value)
                             } else {
                                 onUpdateJob(updateJob.value)
@@ -192,66 +198,70 @@ fun JobsListScreen(
                                     bottom = 0.dp
                                 )
                         ) {
-                            var jobTitle = ""
                             if (edit.value) {
-                                jobTitle = updateJob.value.title
+                                jobTitle.value = updateJob.value.title
                             }
                             RowInput(padding = 16.dp) {
                                 CEditTextLabel(text = "First Name")
                                 EditTextSingleLineBordered(
                                     LocalFocusManager.current,
-                                    value = jobTitle,
+                                    value = jobTitle.value,
                                     hint = "Job Title",
                                     onValueUpdate = { title ->
-                                        updateJob.value.title = title
+                                        jobTitle.value = title
                                     }
                                 )
                             }
 
-                            var jobDescription = ""
                             if (edit.value) {
-                                jobDescription = updateJob.value.description
+                                jobDescription.value = updateJob.value.description
                             }
                             RowInput(padding = 16.dp) {
                                 CEditTextLabel(text = "Job Description")
                                 EditTextSingleLineBordered(
                                     LocalFocusManager.current,
-                                    value = jobDescription,
+                                    value = jobDescription.value,
                                     hint = "Job Description",
                                     onValueUpdate = { description ->
-                                        updateJob.value.description = description
+                                        jobDescription.value = description
                                     }
                                 )
                             }
 
-                            var numOpenings = 0
                             if (edit.value) {
-                                numOpenings = updateJob.value.noOfOpenings
+                                numOpenings.intValue = updateJob.value.noOfOpenings
                             }
                             RowInput(padding = 16.dp) {
                                 CEditTextLabel(text = "No. of Openings", paddingBottom = 0.dp)
                                 EditTextSingleLineBordered(
                                     LocalFocusManager.current,
-                                    value = numOpenings.toString(),
+                                    value = numOpenings.intValue.toString(),
                                     hint = "No. of Openings",
                                     onValueUpdate = { selectedNumOpenings ->
-                                        numOpenings = selectedNumOpenings.toInt()
+                                        numOpenings.intValue = if(selectedNumOpenings.isNotEmpty()) {
+                                            selectedNumOpenings.toInt()
+                                        } else {
+                                            0
+                                        }
                                     },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                                 )
                             }
 
-                            var industry = 0
+
                             if (edit.value) {
-                                industry = updateJob.value.industry
+                                industry.intValue = updateJob.value.industry
                             }
                             val industryTypes = (0..8).toList().map { it.toString() }
                             RowInput(padding = 16.dp) {
                                 CEditTextLabel(text = "Industry Type", isRequired = true)
                                 DropDownMenu(
-                                    industryTypes, valueText = industry.toString(), onValueUpdate = {type ->
-                                        industry = type.toInt()
-                                    }, "Industry Type"
+                                    industryTypes,
+                                    valueText = industry.intValue.toString(),
+                                    onValueUpdate = { type ->
+                                        industry.intValue = type.toInt()
+                                    },
+                                    "Industry Type"
                                 )
                             }
                         }
@@ -311,7 +321,8 @@ fun JobsListScreen(
                     Box(
                         Modifier
                             .pullRefresh(pullRefreshState)
-                            .padding(top = 0.dp)) {
+                            .padding(top = 0.dp)
+                    ) {
                         Column() {
                             if (jobs.isNotEmpty()) {
                                 LazyColumn(
@@ -322,7 +333,15 @@ fun JobsListScreen(
                                 ) {
                                     if (!refreshing) {
                                         itemsIndexed(jobs) { index, item ->
-                                            JobItem(item)
+                                            JobItem(item, onEdit = {
+                                                coroutineScope.launch { modalSheetState.show() }
+                                                updateJob.value.id = item.id
+                                                updateJob.value.title = item.title
+                                                updateJob.value.description = item.description
+                                                updateJob.value.noOfOpenings = item.noOfOpenings
+                                                updateJob.value.industry = item.industry
+                                                toggleEditMode(true)
+                                            })
                                         }
                                     }
                                 }
@@ -345,17 +364,21 @@ fun JobsListScreen(
 @Composable
 fun JobItemPreview() {
     val job = Job()
-    JobItem(job)
+    JobItem(job, onEdit = {
+
+    })
 }
 
 
 @Composable
-fun JobItem(job: Job) {
+fun JobItem(job: Job, onEdit: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, start = 14.dp, end = 14.dp)
-            .clickable { },
+            .clickable {
+                onEdit()
+            },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 4.dp
         ),

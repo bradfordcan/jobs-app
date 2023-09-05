@@ -4,11 +4,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Job(
-    val id: String,
-    val noOfOpenings: Int,
+    var id: String,
+    var noOfOpenings: Int,
     var title: String,
     var description: String,
-    val industry: Int,
+    var industry: Int,
 
     ) {
     constructor() : this(

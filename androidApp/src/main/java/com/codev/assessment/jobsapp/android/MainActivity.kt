@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codev.assessment.jobsapp.data.Job
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity(), KoinComponent {
         val jobsViewModel: JobsViewModel by viewModel()
         setContent {
             AppMainBackground {
+                val context = LocalContext.current
                 val jobs = remember { mutableListOf<Job>() }
                 val jobsListState by jobsViewModel.jobsListState.collectAsStateWithLifecycle()
                 LaunchedEffect(key1 = jobsListState.jobs) {
@@ -34,6 +36,17 @@ class MainActivity : ComponentActivity(), KoinComponent {
                         // todo: do basic filtering
                     }
                 }
+
+                val newJob by jobsViewModel.newJobId.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = newJob.jobId) {
+                    if (newJob.jobId.isNotEmpty()) {
+                        jobs.clear()
+                        showToast(context, "Job opening added!")
+                        jobsViewModel.getJobs() // refresh list with newly added job
+                    }
+                }
+
+                // called on first run
                 jobsViewModel.getJobs()
                 JobsListScreen(
                     jobs = jobs,
@@ -42,7 +55,7 @@ class MainActivity : ComponentActivity(), KoinComponent {
                         jobsViewModel.getJobs()
                     },
                     onCreateNewJob = {
-
+                        jobsViewModel.insertJob(it)
                     },
                     onUpdateJob = {
 
