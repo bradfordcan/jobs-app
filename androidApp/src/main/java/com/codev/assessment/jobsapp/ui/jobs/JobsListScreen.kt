@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -79,7 +80,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun JobListPreview() {
     val job = Job()
-    JobsListScreen(arrayListOf(job, Job()),
+    JobsListScreen(
+        authorized = true,
+        jobs = arrayListOf(job, Job()),
         onRefresh = {
 
         }, onCreateNewJob = {
@@ -92,6 +95,12 @@ fun JobListPreview() {
 
         }, onChangeUserType = {
 
+        }, onDisplayAll = {
+
+        }, onFilterByIndustry = {
+
+        }, onApplyJob = {
+
         })
 }
 
@@ -101,14 +110,18 @@ fun JobListPreview() {
 )
 @Composable
 fun JobsListScreen(
+    authorized: Boolean,
     jobs: List<Job>,
     onRefresh: () -> Unit,
     onCreateNewJob: (NewJobRequest) -> Unit,
     onUpdateJob: (Job) -> Unit,
     onDeleteJob: (String) -> Unit,
     onSearchJob: (String) -> Unit,
-    onChangeUserType: () -> Unit
-) {
+    onChangeUserType: () -> Unit,
+    onDisplayAll: () -> Unit,
+    onFilterByIndustry: (Int) -> Unit,
+    onApplyJob: (Job) -> Unit
+    ) {
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -122,6 +135,7 @@ fun JobsListScreen(
         refreshing = false
     }
 
+    val industryTypes = (0..8).toList().map { it.toString() }
     val pullRefreshState = rememberPullRefreshState(refreshing, ::refresh)
 
     // create/update job
@@ -129,6 +143,7 @@ fun JobsListScreen(
     val jobDescription = remember { mutableStateOf("") }
     val numOpenings = remember { mutableIntStateOf(0) }
     val industry = remember { mutableIntStateOf(0) }
+    val filterIndustry = remember { mutableIntStateOf(0) }
     val newJob = remember { mutableStateOf(NewJobRequest()) }
     val updateJob = remember { mutableStateOf(Job()) }
     val edit = remember { mutableStateOf(false) }
@@ -275,7 +290,6 @@ fun JobsListScreen(
                             if (edit.value) {
                                 industry.intValue = updateJob.value.industry
                             }
-                            val industryTypes = (0..8).toList().map { it.toString() }
                             RowInput(padding = 16.dp) {
                                 CEditTextLabel(text = "Industry Type", isRequired = true)
                                 DropDownMenu(
@@ -308,27 +322,29 @@ fun JobsListScreen(
 
             },
             floatingActionButton = {
-                Box(
-                    modifier = Modifier.navigationBarsPadding()
-                ) {
-                    FloatingActionButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                if (modalSheetState.isVisible)
-                                    modalSheetState.hide()
-                                else {
-                                    modalSheetState.show()
-                                }
-                                toggleEditMode(false)
-                            }
-                        },
-                        backgroundColor = Color.Red
+                if (authorized) {
+                    Box(
+                        modifier = Modifier.navigationBarsPadding()
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Add FAB",
-                            tint = Color.White,
-                        )
+                        FloatingActionButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (modalSheetState.isVisible)
+                                        modalSheetState.hide()
+                                    else {
+                                        modalSheetState.show()
+                                    }
+                                    toggleEditMode(false)
+                                }
+                            },
+                            backgroundColor = Color.Red
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Add FAB",
+                                tint = Color.White,
+                            )
+                        }
                     }
                 }
             },
@@ -351,6 +367,26 @@ fun JobsListScreen(
                             .padding(top = 0.dp)
                     ) {
                         Column() {
+                            val filterByIndustry = arrayListOf<String>()
+                            filterByIndustry.add(0, "All")
+                            filterByIndustry.addAll(industryTypes)
+                            RowInput(padding = 16.dp) {
+                                CEditTextLabel(text = "Filter by Industry Type")
+                                DropDownMenu(
+                                    filterByIndustry,
+                                    valueText = filterIndustry.intValue.toString(),
+                                    onValueUpdate = { type ->
+                                        if (type.contentEquals("All")) {
+                                            onDisplayAll()
+                                        } else {
+                                            filterIndustry.intValue = type.toInt()
+                                            onFilterByIndustry(filterIndustry.intValue)
+                                        }
+                                    },
+                                    "Industry Type"
+                                )
+                            }
+
                             if (jobs.isNotEmpty()) {
                                 LazyColumn(
                                     modifier = Modifier
@@ -361,7 +397,7 @@ fun JobsListScreen(
                                     if (!refreshing) {
                                         itemsIndexed(jobs) { index, item ->
                                             JobItem(
-                                                true,
+                                                authorized,
                                                 job = item,
                                                 onEdit = {
                                                     coroutineScope.launch { modalSheetState.show() }
@@ -374,6 +410,9 @@ fun JobsListScreen(
                                                 },
                                                 onDelete = {
                                                     onDeleteJob(item.id)
+                                                },
+                                                onApply = {
+                                                    onApplyJob(item)
                                                 }
                                             )
                                         }
@@ -404,6 +443,8 @@ fun JobItemPreview() {
 
         }, onDelete = {
 
+        }, onApply = {
+            
         })
 }
 
@@ -414,6 +455,7 @@ fun JobItem(
     job: Job,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onApply: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     val density = LocalDensity.current
@@ -429,7 +471,11 @@ fun JobItem(
             .fillMaxWidth()
             .padding(top = 8.dp, start = 14.dp, end = 14.dp, bottom = 4.dp)
             .clickable {
-                onEdit()
+                if(authorized) {
+                    onEdit()
+                } else {
+                    onApply()
+                }
             },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 4.dp
@@ -446,7 +492,7 @@ fun JobItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(5f)) {
                     Text(
                         text = "${job.title} (${job.noOfOpenings} openings)",
                         fontWeight = FontWeight.Bold
@@ -456,13 +502,16 @@ fun JobItem(
                     Text(text = "Industry: ${job.industry}", color = Color.LightGray)
                     Spacer(modifier = Modifier)
                 }
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        modifier = Modifier.size(22.dp),
-                        imageVector = Icons.Outlined.MoreVert,
-                        contentDescription = "",
-                        tint = Color.Gray
-                    )
+                if (authorized) {
+                    Spacer(Modifier.width(24.dp))
+                    IconButton(modifier = Modifier.weight(1f), onClick = { expanded = !expanded }) {
+                        Icon(
+                            modifier = Modifier.size(22.dp),
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = "",
+                            tint = Color.Gray
+                        )
+                    }
                 }
             }
 
@@ -478,27 +527,26 @@ fun JobItem(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                if (authorized) {
-                    DropdownMenuItem(
-                        text = { androidx.compose.material3.Text("Edit") },
-                        onClick = {
-                            expanded = false
-                            onEdit()
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            androidx.compose.material3.Text(
-                                text = "Delete",
-                                color = Color.Red
-                            )
-                        },
-                        onClick = {
-                            expanded = false
-                            onDelete()
-                        }
-                    )
-                }
+
+                DropdownMenuItem(
+                    text = { androidx.compose.material3.Text("Edit") },
+                    onClick = {
+                        expanded = false
+                        onEdit()
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        androidx.compose.material3.Text(
+                            text = "Delete",
+                            color = Color.Red
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onDelete()
+                    }
+                )
             }
         }
     }

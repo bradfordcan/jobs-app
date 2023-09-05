@@ -14,6 +14,10 @@ data class JobsListState(
     var jobs: List<Job> = emptyList(),
 )
 
+data class FilteredJobsListState(
+    var filteredJobs: List<Job> = emptyList(),
+)
+
 data class NewJobState(
     var jobId: String = "",
 )
@@ -37,6 +41,20 @@ class JobsViewModel(
         viewModelScope.launch {
             repository.getAll().collect {
                 _jobsListState.value = JobsListState(jobs = it)
+            }
+        }
+    }
+
+    fun reset() {
+        _jobsListState.value = JobsListState()
+    }
+
+    private val _filteredJobsListState = MutableStateFlow(FilteredJobsListState())
+    val filteredJobsListState: StateFlow<FilteredJobsListState> = _filteredJobsListState
+    fun filterJobsByIndustry(query: String, industryType: Int) {
+        viewModelScope.launch {
+            repository.filterJobs(query, industryType).collect {
+                _filteredJobsListState.value = FilteredJobsListState(filteredJobs = it)
             }
         }
     }

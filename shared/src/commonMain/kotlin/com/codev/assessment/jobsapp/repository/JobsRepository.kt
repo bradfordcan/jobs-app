@@ -12,9 +12,12 @@ import org.koin.core.component.inject
 interface JobsDataSource {
     fun getAll(): Flow<List<Job>>
 
+    fun filterJobs(query: String, industryType: Int): Flow<List<Job>>
+
     fun insertJob(newJobRequest: NewJobRequest): Flow<String>
 
     fun updateJob(job: Job): Flow<Boolean>
+
     fun deleteJob(id: String): Flow<Boolean>
 
 }
@@ -26,6 +29,13 @@ class JobsRepository : KoinComponent, JobsDataSource {
     override fun getAll(): Flow<List<Job>> {
         return flow {
             val jobs = api.getAll()
+            emit(jobs)
+        }
+    }
+
+    override fun filterJobs(query: String, industryType: Int): Flow<List<Job>> {
+        return flow {
+            val jobs = api.filterJobs(query, industryType)
             emit(jobs)
         }
     }

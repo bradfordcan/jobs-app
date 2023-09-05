@@ -32,6 +32,21 @@ class JobsApi(
         }
     }
 
+    suspend fun filterJobs(query: String, industryType: Int): List<Job> {
+        val httpResponse: HttpResponse = client.get("$BASE_URL/filter") {
+            if(query.isNotEmpty())
+                parameter("keyword", query)
+
+            if(industryType != -1)
+                parameter("jobIndustryType", industryType)
+        }
+        return if (httpResponse.status.value in 200..299) {
+            httpResponse.body()
+        } else {
+            emptyList()
+        }
+    }
+
     suspend fun insertJob(request: NewJobRequest): String {
         val httpResponse: HttpResponse = client.post("$BASE_URL/insert") {
             contentType(ContentType.Application.Json)

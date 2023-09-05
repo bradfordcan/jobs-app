@@ -1,6 +1,12 @@
 package com.codev.assessment.jobsapp.di
 
+import com.codev.assessment.jobsapp.remote.ApplicantsApi
+import com.codev.assessment.jobsapp.remote.JobApplicantApi
 import com.codev.assessment.jobsapp.remote.JobsApi
+import com.codev.assessment.jobsapp.repository.ApplicantsDataSource
+import com.codev.assessment.jobsapp.repository.ApplicantsRepository
+import com.codev.assessment.jobsapp.repository.JobApplicantDataSource
+import com.codev.assessment.jobsapp.repository.JobApplicantRepository
 import com.codev.assessment.jobsapp.repository.JobsDataSource
 import com.codev.assessment.jobsapp.repository.JobsRepository
 import com.codev.assessment.jobsapp.repository.platformModule
@@ -36,12 +42,12 @@ fun commonModule(enableNetworkLogs: Boolean) = module {
     factory { (tag: String?) -> if (tag != null) baseLogger.withTag(tag) else baseLogger }*/
 
     single { JobsApi(get()) }
-    // single { ApplicantsApi(get()) }
-    // single { JobApplicantApi(get()) }
+    single { ApplicantsApi(get()) }
+    single { JobApplicantApi(get()) }
 
     single<JobsDataSource> { JobsRepository() }
-    // single<ApplicantsDataSource> { ApplicantsRepository() }
-    // single<JobApplicantDataSource> { JobApplicantRepository() }
+    single<ApplicantsDataSource> { ApplicantsRepository() }
+    single<JobApplicantDataSource> { JobApplicantRepository() }
 
 
     /*single {

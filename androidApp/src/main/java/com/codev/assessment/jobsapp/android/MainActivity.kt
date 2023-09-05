@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.ui.components.AppMainBackground
+import com.codev.assessment.jobsapp.ui.components.ApplicantDialog
 import com.codev.assessment.jobsapp.ui.components.ChangeUserTypeDialog
 import com.codev.assessment.jobsapp.ui.components.SimpleAlertDialog
 import com.codev.assessment.jobsapp.ui.dialog.UiViewModel
@@ -33,18 +34,35 @@ class MainActivity : ComponentActivity(), KoinComponent {
         var defaultSelected = settings.getInt("userType", 0)
         val jobsViewModel: JobsViewModel by viewModel()
         val uiViewModel: UiViewModel by viewModel()
+
+        val userTypes = arrayListOf("Admin", "Applicant")
+
         setContent {
             AppMainBackground {
                 val context = LocalContext.current
 
                 val searchJobQuery = remember { mutableStateOf("") }
                 val industryTypeQuery = remember { mutableIntStateOf(0) }
+                fun filter() {
+                    jobsViewModel.filterJobsByIndustry(searchJobQuery.value, industryTypeQuery.value)
+                }
+
+                val userType = remember { mutableStateOf(userTypes[settings.getInt("userType", 0)]) }
                 val jobs = remember { mutableListOf<Job>() }
                 val jobsListState by jobsViewModel.jobsListState.collectAsStateWithLifecycle()
                 LaunchedEffect(key1 = jobsListState.jobs) {
                     jobs.clear()
                     if (jobsListState.jobs.isNotEmpty()) {
                         jobs.addAll(jobsListState.jobs)
+                        jobs.sortByDescending { it.title }
+                    }
+                }
+
+                val filteredJobsListState by jobsViewModel.filteredJobsListState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = filteredJobsListState.filteredJobs) {
+                    jobs.clear()
+                    if (filteredJobsListState.filteredJobs.isNotEmpty()) {
+                        jobs.addAll(filteredJobsListState.filteredJobs)
                         jobs.sortByDescending { it.title }
                     }
                 }
@@ -95,8 +113,29 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     message = confirmDeleteJobDialogState.message
                 )
 
+                // apply job dialog
+                val applyJobDialogState by uiViewModel.showApplyJobDialog.collectAsState()
+                if(applyJobDialogState.data != null) {
+                    ApplicantDialog(onDismiss = { fullName, email ->
+                        showToast(context, fullName)
+                    })
+                }
+
+                SimpleAlertDialog(
+                    show = applyJobDialogState.showAlertDialog,
+                    hideCancel = false,
+                    onDismiss = {
+                        uiViewModel.onApplyJobDialogDismissed()
+                    },
+                    onConfirm = {
+                        uiViewModel.onApplyJobDialogDismissed()
+
+                    },
+                    title = applyJobDialogState.title,
+                    message = applyJobDialogState.message
+                )
+
                 val userTypeDialog = remember { mutableStateOf(true) }
-                val userTypes = arrayListOf("Admin", "Applicant")
 
                 if (userTypeDialog.value) {
                     defaultSelected = settings.getInt("userType", 0)
@@ -106,12 +145,14 @@ class MainActivity : ComponentActivity(), KoinComponent {
                         submitButtonText = "Apply Settings",
                         onSubmitButtonClick = {
                             settings.edit().putInt("userType", it).apply()
+                            userType.value = userTypes[it]
                             showToast(context, "You are now an ${userTypes[it]}")
                         },
                         onDismissRequest = { userTypeDialog.value = false })
                 }
 
                 JobsListScreen(
+                    authorized = userType.value.contentEquals("Admin"),
                     jobs = jobs,
                     onRefresh = {
                         // Get all jobs
@@ -132,11 +173,26 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     },
                     onSearchJob = {
                         if (it.isNotEmpty()) {
-
+                            searchJobQuery.value = it
+                            filter()
                         }
                     },
                     onChangeUserType = {
                         userTypeDialog.value = true
+                    }, onDisplayAll = {
+                        // Get all jobs
+                        jobsViewModel.reset()
+                        industryTypeQuery.value = -1
+                        jobsViewModel.getJobs()
+                    }, onFilterByIndustry = {
+                        industryTypeQuery.value = it
+                        filter()
+                    }, onApplyJob = {
+                        uiViewModel.onOpenApplyJobDialogClicked(
+                            it,
+                            "Apply as ${it.title}",
+                            "Are you sure you want to apply for this job?"
+                        )
                     }
                 )
             }
