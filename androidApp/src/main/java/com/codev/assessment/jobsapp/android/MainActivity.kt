@@ -116,12 +116,16 @@ class MainActivity : ComponentActivity(), KoinComponent {
                 // apply job dialog
                 val applyJobDialogState by uiViewModel.showApplyJobDialog.collectAsState()
                 if(applyJobDialogState.data != null) {
-                    ApplicantDialog(onDismiss = { fullName, email ->
-                        showToast(context, fullName)
+                    ApplicantDialog(title = applyJobDialogState.data!!.title, onDismiss = { fullName, email ->
+                        if (fullName.isNotEmpty() && email.isNotEmpty()) {
+
+                        } else {
+                            showToast(context, "Make sure fullName and email is not empty")
+                        }
                     })
                 }
 
-                SimpleAlertDialog(
+                /*SimpleAlertDialog(
                     show = applyJobDialogState.showAlertDialog,
                     hideCancel = false,
                     onDismiss = {
@@ -133,7 +137,7 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     },
                     title = applyJobDialogState.title,
                     message = applyJobDialogState.message
-                )
+                )*/
 
                 val userTypeDialog = remember { mutableStateOf(true) }
 

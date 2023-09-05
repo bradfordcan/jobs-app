@@ -26,7 +26,7 @@ import androidx.compose.ui.window.Dialog
 import com.codev.assessment.jobsapp.android.showToast
 
 @Composable
-fun ApplicantDialog(onDismiss: (String, String) -> Unit) {
+fun ApplicantDialog(title: String, onDismiss: (String, String) -> Unit) {
     val context = LocalContext.current
     var fullName by remember {
         mutableStateOf("")
@@ -58,7 +58,7 @@ fun ApplicantDialog(onDismiss: (String, String) -> Unit) {
             ) {
 
                 Text(
-                    text = "Enter your details",
+                    text = "Apply as $title",
                     modifier = Modifier.padding(8.dp),
                     fontSize = 20.sp
                 )
