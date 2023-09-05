@@ -163,9 +163,11 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     ApplicantDialog(title = applyJobDialogState.data!!.title, onDismiss = { fullName, email ->
                         if (fullName.isNotEmpty() && email.isNotEmpty()) {
                             // todo: retrieve applicants and check if email address exists
+                            uiViewModel.onApplyJobDialogDismissed()
                             applicantViewModel.getApplicants(applyJobDialogState.data!!.id, fullName, email)
                         } else {
                             showToast(context, "Make sure fullName and email is not empty")
+                            uiViewModel.onApplyJobDialogDismissed()
                         }
                     })
                 }

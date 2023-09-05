@@ -78,7 +78,7 @@ fun ApplicantDialog(title: String, onDismiss: (String, String) -> Unit) {
                 Row {
                     OutlinedButton(
                         onClick = {
-
+                            onDismiss("", "")
                         },
                         Modifier
                             .fillMaxWidth()
