@@ -4,13 +4,18 @@ import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.remote.body.NewJobRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
+import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.util.AttributeKey
 import org.koin.core.component.KoinComponent
 
 private const val BASE_URL = "https://codev-job-board-app.azurewebsites.net/api/Job"
@@ -49,6 +54,14 @@ class JobsApi(
         } else {
             false
         }
+    }
+
+    suspend fun deleteJob(id: String): Boolean {
+        val httpResponse: HttpResponse = client.delete("$BASE_URL/delete") {
+            contentType(ContentType.Application.Json)
+            parameter("id", id)
+        }
+        return httpResponse.status.value in 200..299
     }
 
 }

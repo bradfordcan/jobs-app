@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,6 +29,7 @@ import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -34,7 +37,10 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,11 +53,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.remote.body.NewJobRequest
@@ -77,6 +86,8 @@ fun JobListPreview() {
 
         }, onUpdateJob = {
 
+        }, onDeleteJob = {
+
         })
 }
 
@@ -90,6 +101,7 @@ fun JobsListScreen(
     onRefresh: () -> Unit,
     onCreateNewJob: (NewJobRequest) -> Unit,
     onUpdateJob: (Job) -> Unit,
+    onDeleteJob: (String) -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -242,11 +254,12 @@ fun JobsListScreen(
                                     value = numOpenings.intValue.toString(),
                                     hint = "No. of Openings",
                                     onValueUpdate = { selectedNumOpenings ->
-                                        numOpenings.intValue = if(selectedNumOpenings.isNotEmpty()) {
-                                            selectedNumOpenings.toInt()
-                                        } else {
-                                            0
-                                        }
+                                        numOpenings.intValue =
+                                            if (selectedNumOpenings.isNotEmpty()) {
+                                                selectedNumOpenings.toInt()
+                                            } else {
+                                                0
+                                            }
                                     },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                                 )
@@ -337,15 +350,22 @@ fun JobsListScreen(
                                 ) {
                                     if (!refreshing) {
                                         itemsIndexed(jobs) { index, item ->
-                                            JobItem(item, onEdit = {
-                                                coroutineScope.launch { modalSheetState.show() }
-                                                updateJob.value.id = item.id
-                                                updateJob.value.title = item.title
-                                                updateJob.value.description = item.description
-                                                updateJob.value.noOfOpenings = item.noOfOpenings
-                                                updateJob.value.industry = item.industry
-                                                toggleEditMode(true)
-                                            })
+                                            JobItem(
+                                                true,
+                                                job = item,
+                                                onEdit = {
+                                                    coroutineScope.launch { modalSheetState.show() }
+                                                    updateJob.value.id = item.id
+                                                    updateJob.value.title = item.title
+                                                    updateJob.value.description = item.description
+                                                    updateJob.value.noOfOpenings = item.noOfOpenings
+                                                    updateJob.value.industry = item.industry
+                                                    toggleEditMode(true)
+                                                },
+                                                onDelete = {
+                                                    onDeleteJob(item.id)
+                                                }
+                                            )
                                         }
                                     }
                                 }
@@ -368,18 +388,36 @@ fun JobsListScreen(
 @Composable
 fun JobItemPreview() {
     val job = Job()
-    JobItem(job, onEdit = {
+    JobItem(true,
+        job,
+        onEdit = {
 
-    })
+        }, onDelete = {
+
+        })
 }
 
 
 @Composable
-fun JobItem(job: Job, onEdit: () -> Unit) {
+fun JobItem(
+    authorized: Boolean,
+    job: Job,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    var offsetX by remember {
+        mutableStateOf(0.dp)
+    }
+    val parentWidth by remember {
+        mutableIntStateOf(0)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, start = 14.dp, end = 14.dp)
+            .padding(top = 8.dp, start = 14.dp, end = 14.dp, bottom = 4.dp)
             .clickable {
                 onEdit()
             },
@@ -393,10 +431,65 @@ fun JobItem(job: Job, onEdit: () -> Unit) {
         Column(
             modifier = Modifier.padding(15.dp)
         ) {
-            Text(text = "${job.title} (${job.noOfOpenings} openings)", fontWeight = FontWeight.Bold)
-            Text(text = job.description)
-            Spacer(Modifier.padding(2.dp))
-            Text(text = "Industry: ${job.industry}", color = Color.LightGray)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "${job.title} (${job.noOfOpenings} openings)",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(text = job.description)
+                    Spacer(Modifier.padding(2.dp))
+                    Text(text = "Industry: ${job.industry}", color = Color.LightGray)
+                    Spacer(modifier = Modifier)
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        modifier = Modifier.size(22.dp),
+                        imageVector = Icons.Outlined.MoreVert,
+                        contentDescription = "",
+                        tint = Color.Gray
+                    )
+                }
+            }
+
+            DropdownMenu(
+                modifier = Modifier.onPlaced {
+                    val popUpWidthPx = parentWidth - it.size.width
+
+                    offsetX = with(density) {
+                        popUpWidthPx.toDp()
+                    }
+                },
+                offset = DpOffset(offsetX, 0.dp),
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                if (authorized) {
+                    DropdownMenuItem(
+                        text = { androidx.compose.material3.Text("Edit") },
+                        onClick = {
+                            expanded = false
+                            onEdit()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            androidx.compose.material3.Text(
+                                text = "Delete",
+                                color = Color.Red
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onDelete()
+                        }
+                    )
+                }
+            }
         }
     }
 }

@@ -22,6 +22,10 @@ data class UpdateJobState(
     var successUpdate: Boolean = false,
 )
 
+data class DeleteJobState(
+    var successDelete: Boolean = false,
+)
+
 class JobsViewModel(
     private val repository: JobsDataSource,
 ) : ViewModel() {
@@ -53,6 +57,16 @@ class JobsViewModel(
         viewModelScope.launch {
             repository.updateJob(job).collect {
                 _updateJobState.value = UpdateJobState(successUpdate = it)
+            }
+        }
+    }
+
+    private val _deleteJobState = MutableStateFlow(DeleteJobState())
+    val deleteJobState: StateFlow<DeleteJobState> = _deleteJobState
+    fun deleteJob(id: String) {
+        viewModelScope.launch {
+            repository.deleteJob(id).collect {
+                _deleteJobState.value = DeleteJobState(successDelete = it)
             }
         }
     }

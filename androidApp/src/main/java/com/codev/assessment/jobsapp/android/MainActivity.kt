@@ -6,13 +6,17 @@ import androidx.activity.compose.setContent
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.codev.assessment.jobsapp.data.Job
 import com.codev.assessment.jobsapp.ui.components.AppMainBackground
+import com.codev.assessment.jobsapp.ui.components.SimpleAlertDialog
+import com.codev.assessment.jobsapp.ui.dialog.UiViewModel
 import com.codev.assessment.jobsapp.ui.jobs.JobsListScreen
 import com.codev.assessment.jobsapp.ui.jobs.JobsViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -23,6 +27,7 @@ class MainActivity : ComponentActivity(), KoinComponent {
         super.onCreate(savedInstanceState)
 
         val jobsViewModel: JobsViewModel by viewModel()
+        val uiViewModel: UiViewModel by viewModel()
         setContent {
             AppMainBackground {
                 val context = LocalContext.current
@@ -55,8 +60,34 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     }
                 }
 
+                val deleteJob by jobsViewModel.deleteJobState.collectAsStateWithLifecycle()
+                LaunchedEffect(key1 = deleteJob.successDelete) {
+                    if (deleteJob.successDelete) {
+                        jobs.clear()
+                        showToast(context, "Job deleted!")
+                        jobsViewModel.getJobs() // refresh list
+                    }
+                }
+
                 // called on first run
                 jobsViewModel.getJobs()
+
+                // delete confirmation dialog
+                val confirmDeleteJobDialogState by uiViewModel.showAlertDialog.collectAsState()
+                SimpleAlertDialog(
+                    show = confirmDeleteJobDialogState.showAlertDialog,
+                    hideCancel = false,
+                    onDismiss = {
+                        uiViewModel.onAlertDialogDismissed()
+                    },
+                    onConfirm = {
+                        uiViewModel.onAlertDialogDismissed()
+                        jobsViewModel.deleteJob(confirmDeleteJobDialogState.data)
+                    },
+                    title = confirmDeleteJobDialogState.title,
+                    message = confirmDeleteJobDialogState.message
+                )
+
                 JobsListScreen(
                     jobs = jobs,
                     onRefresh = {
@@ -68,6 +99,13 @@ class MainActivity : ComponentActivity(), KoinComponent {
                     },
                     onUpdateJob = {
                         jobsViewModel.updateJob(it)
+                    },
+                    onDeleteJob = {
+                        uiViewModel.onOpenAlertDialogClicked(
+                            it,
+                            "Confirm Delete",
+                            "Are you sure you want to delete this job?"
+                        )
                     }
                 )
             }

@@ -15,6 +15,7 @@ interface JobsDataSource {
     fun insertJob(newJobRequest: NewJobRequest): Flow<String>
 
     fun updateJob(job: Job): Flow<Boolean>
+    fun deleteJob(id: String): Flow<Boolean>
 
 }
 
@@ -40,6 +41,13 @@ class JobsRepository : KoinComponent, JobsDataSource {
         return flow {
             val successfulUpdate = api.updateJob(job)
             emit(successfulUpdate)
+        }
+    }
+
+    override fun deleteJob(id: String): Flow<Boolean> {
+        return flow {
+            val successfulDelete = api.deleteJob(id)
+            emit(successfulDelete)
         }
     }
 
